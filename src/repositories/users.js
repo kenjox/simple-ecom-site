@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import util from 'node:util';
 
+const cryptoScrypt = util.promisify(crypto.scrypt);
 class UserRepo {
   constructor(filename) {
     if (!filename || typeof filename !== 'string') {
@@ -50,12 +52,18 @@ class UserRepo {
 
   async save(user) {
     const users = await this.getAll();
-    users.push({ id: this.genRandomId(), ...user });
+
+    user.id = this.genRandomId();
+    user.password = await this.hashPassword(user.password);
+
+    users.push(user);
 
     await this.writeDataToFile(users);
+
+    return user;
   }
 
-  async update(userId, data) {
+  async update({ userId, data }) {
     const users = await this.getAll();
 
     const searchedUser = users.find((user) => user.id === userId);
@@ -80,6 +88,22 @@ class UserRepo {
 
   genRandomId() {
     return crypto.randomBytes(4).toString('hex');
+  }
+
+  async hashPassword(password) {
+    const salt = crypto.randomBytes(8).toString('hex');
+    const buffer = await cryptoScrypt(password, salt, 64);
+
+    return `${buffer.toString('hex')}.${salt}`;
+  }
+
+  async comparePasswords({ saved, supplied }) {
+    const [hashedSavedPassword, salt] = saved.split('.');
+    const buff = await cryptoScrypt(supplied, salt, 64);
+
+    const suppliedHashed = buff.toString('hex');
+
+    return hashedSavedPassword === suppliedHashed;
   }
 }
 

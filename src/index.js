@@ -87,16 +87,71 @@ app.post('/users/signup', async (req, res) => {
     return res.send('Password must match');
   }
 
-  res.send('Account created');
+  const user = await userRepo.save({ email, password });
+
+  req.session.userId = user.id;
+
+  res.send('Account created!!');
 });
 
 /** Login form */
-app.get('/users/signin', (req, res) => {});
+app.get('/users/signin', (req, res) => {
+  res.send(`
+    <div>
+      <form method="POST">
+        <p>
+          <label>
+            Email
+            <input type="email" name="email" />
+          </label>
+        </p>
+        <p>
+          <label>
+            Password
+            <input type="password" name="password" />
+          </label>
+        </p>
+        <p>
+        <button>Sign In</button>
+        </p>
+      </form>
+    </div>
+  `);
+});
 
 /** Login user */
-app.post('/users/signin', (req, res) => {});
+app.post('/users/signin', async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await userRepo.getOneBy({ email });
+
+  if (!user) {
+    return res.send('Invalid email or password');
+  }
+
+  if (user.email !== email) {
+    return res.send('Invalid email or password');
+  }
+
+  const isValidPassword = await userRepo.comparePasswords({
+    saved: user.password,
+    supplied: password,
+  });
+
+  if (!isValidPassword) {
+    return res.send('Invalid email or password');
+  }
+
+  req.session.userId = user.id;
+
+  res.send('Signed in 🎉🎉🎉');
+});
 
 /** Logout user */
-app.post('/users/signout', (req, res) => {});
+app.get('/users/signout', (req, res) => {
+  req.session = null;
+
+  res.send('You are logged out 👋🏿');
+});
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
