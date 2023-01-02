@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import util from 'node:util';
 
 const cryptoScrypt = util.promisify(crypto.scrypt);
+
 class UserRepo {
   constructor(filename) {
     if (!filename || typeof filename !== 'string') {
