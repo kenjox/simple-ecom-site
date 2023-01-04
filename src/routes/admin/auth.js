@@ -2,27 +2,27 @@ import express from 'express';
 
 import { userRepo } from '../../repositories/users.js';
 import { signinTemplate } from '../../views/admin/auth/signin.js';
-import { signoutTemplate } from '../../views/admin/auth/signout.js';
+import { signupTemplate } from '../../views/admin/auth/signup.js';
+import { signupValidator } from './validators.js';
+import { validationResult } from 'express-validator';
 
 const router = express.Router();
 
 /** Sign up form endpoint */
 router.get('/users/signup', (req, res) => {
-  res.send(signoutTemplate());
+  res.send(signupTemplate({}));
 });
 
 /** Storing user sign up details */
-router.post('/users/signup', async (req, res) => {
-  const { email, password, confirmPassword } = req.body;
+router.post('/users/signup', [signupValidator()], async (req, res) => {
+  const { email, password } = req.body;
 
-  const existingUser = await userRepo.getOneBy({ email });
+  const errors = validationResult(req);
 
-  if (existingUser) {
-    return res.send('Email is already taken');
-  }
+  console.log(errors.mapped());
 
-  if (password !== confirmPassword) {
-    return res.send('Password must match');
+  if (!errors.isEmpty()) {
+    return res.send(signupTemplate({ errors }));
   }
 
   const user = await userRepo.save({ email, password });
